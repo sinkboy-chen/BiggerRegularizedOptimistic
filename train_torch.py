@@ -1,4 +1,5 @@
 import os
+import time
 import random
 import numpy as np
 import torch
@@ -109,8 +110,16 @@ def main(_):
     # -----------------------------------------------------------------------
     observation, _ = env.reset(seed=FLAGS.seed)
     
+    # Profiling variables
+    time_action_sample = 0.0
+    time_env_step = 0.0
+    time_buffer_add = 0.0
+    time_buffer_sample = 0.0
+    time_agent_update = 0.0
+    
     for i in tqdm.tqdm(range(1, FLAGS.max_steps + 1), disable=not FLAGS.tqdm, smoothing=0.1):
         # 1. Select action
+        t0 = time.time()
         if i <= FLAGS.start_training:
             action = env.action_space.sample()
         else:
@@ -120,13 +129,18 @@ def main(_):
                 temperature=1.0
             )
             action = action.cpu().numpy()[0]
+        time_action_sample += (time.time() - t0)
             
         # 2. Step environment
+        t0 = time.time()
         next_observation, reward, termination, truncation, _ = env.step(action)
         done = get_done(termination, truncation)
+        time_env_step += (time.time() - t0)
         
         # 3. Store in buffer
+        t0 = time.time()
         buffer.add(observation, next_observation, action, reward, done)
+        time_buffer_add += (time.time() - t0)
         observation = next_observation
         
         if termination or truncation:
@@ -135,13 +149,33 @@ def main(_):
             
         # 4. Update Agent
         if i > FLAGS.start_training:
+            t0 = time.time()
             observations, next_observations, actions, rewards, dones = buffer.sample_multibatch(
                 FLAGS.batch_size, FLAGS.updates_per_step
             )
+            time_buffer_sample += (time.time() - t0)
+            
+            t0 = time.time()
             info = agent.update(
                 i, observations, next_observations, actions, rewards, dones, FLAGS.updates_per_step
             )
+            time_agent_update += (time.time() - t0)
+            
             # Log train info
+            if i % FLAGS.eval_interval == 0:
+                info['time/action_sample'] = time_action_sample
+                info['time/env_step'] = time_env_step
+                info['time/buffer_add'] = time_buffer_add
+                info['time/buffer_sample'] = time_buffer_sample
+                info['time/agent_update'] = time_agent_update
+                
+                # Reset profiling timers
+                time_action_sample = 0.0
+                time_env_step = 0.0
+                time_buffer_add = 0.0
+                time_buffer_sample = 0.0
+                time_agent_update = 0.0
+                
             log_to_wandb_if_time_to(i, info, FLAGS.eval_interval)
             
         # 5. Evaluate and Save
