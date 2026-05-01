@@ -41,7 +41,6 @@ def main(_):
     save_dir = f'./results/{FLAGS.env_name}_RR{str(FLAGS.updates_per_step)}/'
     wandb.init(
         config=FLAGS,
-        entity='naumix',
         project='BRO',
         group=f'{FLAGS.env_name}',
         name=f'BRO_Quantile:{FLAGS.distributional}_BS:{FLAGS.batch_size}_RR:{FLAGS.updates_per_step}'

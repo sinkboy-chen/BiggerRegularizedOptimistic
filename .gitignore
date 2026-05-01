@@ -4,3 +4,5 @@ jaxrl/.DS_Store
 .DS_Store
 jaxrl/.DS_Store
 scripts/.DS_Store
+__pycache__*
+wandb

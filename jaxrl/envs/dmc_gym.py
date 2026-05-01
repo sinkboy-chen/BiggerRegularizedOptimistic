@@ -30,23 +30,30 @@ class dmc2gym(core.Env):
         self.observation_space = dmc_spec2gym_space(self._env.observation_spec())
         self.seed(seed=task_kwargs['random'])
 
+    def seed(self, seed=None):
+        self.action_space.seed(seed)
+        self.observation_space.seed(seed)
+        return [seed]
+
     def __getattr__(self, name):
         return getattr(self._env, name)
 
-    def step(self, action: np.ndarray) -> TimeStep:
+    def step(self, action: np.ndarray):
         assert self.action_space.contains(action)
         time_step = self._env.step(action)
         reward = time_step.reward or 0
-        done = time_step.last()
+        terminated = time_step.last()
+        truncated = False
         obs = time_step.observation
         info = {}
-        if done and time_step.discount == 1.0:
-            info['TimeLimit.truncated'] = True
-        return obs, reward, done, info
+        if terminated and time_step.discount == 1.0:
+            terminated = False
+            truncated = True
+        return obs, reward, terminated, truncated, info
 
-    def reset(self):
+    def reset(self, seed=None, options=None):
         time_step = self._env.reset()
-        return time_step.observation
+        return time_step.observation, {}
 
     def render(self,
                mode='rgb_array',
@@ -85,7 +92,8 @@ class make_env_dmc(gym.Env):
                                             dtype=self.envs[0].observation_space.dtype)
 
     def _reset_idx(self, idx):
-        return self.envs[idx].reset()
+        obs, _ = self.envs[idx].reset()
+        return obs
 
     def reset_where_done(self, observations, terms, truns):
         resets = np.zeros((terms.shape))
@@ -109,17 +117,17 @@ class make_env_dmc(gym.Env):
     def reset(self):
         obs = []
         for env in self.envs:
-            obs.append(env.reset())
+            ob, _ = env.reset()
+            obs.append(ob)
         return np.stack(obs)
 
     def step(self, actions):
         obs, rews, terms, truns = [], [], [], []
         for env, action in zip(self.envs, actions):
-            ob, reward, done, info = env.step(action)
+            ob, reward, term, trun, info = env.step(action)
             obs.append(ob)
             rews.append(reward)
-            terms.append(False)
-            trun = True if 'TimeLimit.truncated' in info else False
+            terms.append(term)
             truns.append(trun)
         return np.stack(obs), np.stack(rews), np.stack(terms), np.stack(truns), None
 
