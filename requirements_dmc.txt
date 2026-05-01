@@ -13,6 +13,6 @@ tfp-nightly==0.20.0.dev20230524
 wandb
 ml_collections
 gymnasium
---index-url https://download.pytorch.org/whl/cpu
+--extra-index-url https://download.pytorch.org/whl/cpu
 torch
 torchvision
