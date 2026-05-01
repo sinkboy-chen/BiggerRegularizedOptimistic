@@ -26,6 +26,7 @@ flags.DEFINE_integer('replay_buffer_size', 1000000, 'Replay buffer capacity.')
 flags.DEFINE_integer('start_training', 2500, 'Number of training steps to start training.')
 flags.DEFINE_integer('updates_per_step', 10, 'Number of updates per step (replay ratio).')
 flags.DEFINE_boolean('distributional', True, 'Use distributional critic.')
+flags.DEFINE_boolean('compile', True, 'Use torch.compile for CPU/GPU acceleration.')
 flags.DEFINE_boolean('tqdm', False, 'Use tqdm progress bar.')
 flags.DEFINE_string('save_dir', './results_torch/', 'Directory to save checkpoints and logs.')
 
@@ -102,7 +103,8 @@ def main(_):
         action_size=act_dim, 
         device=device, 
         updates_per_step=FLAGS.updates_per_step,
-        distributional=FLAGS.distributional
+        distributional=FLAGS.distributional,
+        use_compile=FLAGS.compile
     )
 
     # -----------------------------------------------------------------------

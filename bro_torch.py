@@ -234,6 +234,7 @@ class BRO(nn.Module):
         std_multiplier: float = 0.75,
         init_optimism: float = 1.0,
         init_regularizer: float = 0.25,
+        use_compile: bool = False,
     ):
         super().__init__()
         self.device = device
@@ -254,6 +255,7 @@ class BRO(nn.Module):
         self.critic_lr = critic_lr
         self.temp_lr = temp_lr
         self.adj_lr = adj_lr
+        self.use_compile = use_compile
 
         # Quantile taus
         quantile_taus = torch.arange(0, n_quantiles + 1, dtype=torch.float32) / n_quantiles
@@ -277,6 +279,13 @@ class BRO(nn.Module):
 
         self.actor = BroNetActor(self.state_size, self.action_size, 256, 1).to(d)
         self.actor_o = BroNetOptimisticActor(self.state_size, self.action_size, 256, 1).to(d)
+
+        if self.use_compile:
+            print("Optimizing networks with torch.compile...")
+            self.critic = torch.compile(self.critic)
+            self.target_critic = torch.compile(self.target_critic)
+            self.actor = torch.compile(self.actor)
+            self.actor_o = torch.compile(self.actor_o)
 
         # Temperature (learnable log param)
         self.log_temp = nn.Parameter(torch.tensor(np.log(self.init_temperature), dtype=torch.float32, device=d))
