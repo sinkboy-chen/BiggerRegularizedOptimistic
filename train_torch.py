@@ -3,6 +3,7 @@ import time
 import random
 import numpy as np
 import torch
+torch.set_float32_matmul_precision('high')
 import wandb
 import tqdm
 from absl import app, flags
